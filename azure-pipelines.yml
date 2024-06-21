@@ -5,26 +5,31 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  JAVA_HOME: '/usr/lib/jvm/zulu-11-azure-amd64'
+  JAVA_HOME: '/usr/lib/jvm/zulu-17-azure-amd64'
   MAVEN_OPTS: '-Xmx1024m'
 
 steps:
 - task: JavaToolInstaller@0
   inputs:
-    versionSpec: '11'
+    versionSpec: '17'
     jdkArchitectureOption: 'x64'
     jdkSourceOption: 'PreInstalled'
     jdkDestinationDirectory: '$(JAVA_HOME)'
 
-- script: |
-    ./mvnw clean install
-  displayName: 'Build and Test'
-
-- task: PublishTestResults@2
+- task: Maven@3
   inputs:
+    mavenPomFile: 'pom.xml'
+    goals: 'clean install'
+    options: '--batch-mode'
+    publishJUnitResults: true
     testResultsFiles: '**/target/surefire-reports/TEST-*.xml'
-    searchFolder: '$(System.DefaultWorkingDirectory)'
-    testRunTitle: 'JUnit Test Results'
+    javaHomeOption: 'JDKVersion'
+    jdkVersionOption: 'default'
+    mavenVersionOption: 'Default'
+    mavenAuthenticateFeed: false
+    effectivePomSkip: false
+    sonarQubeRunAnalysis: false
+  displayName: 'Build and Test with Maven'
 
 - task: CopyFiles@2
   inputs:
