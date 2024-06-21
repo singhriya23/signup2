@@ -20,16 +20,26 @@ steps:
   inputs:
     mavenPomFile: 'pom.xml'
     goals: 'clean install'
-    options: '--batch-mode'
+    options: '--batch-mode -e -X'  # Enable detailed logging
     publishJUnitResults: true
     testResultsFiles: '**/target/surefire-reports/TEST-*.xml'
     javaHomeOption: 'JDKVersion'
-    jdkVersionOption: 'default'
+    jdkVersionOption: '1.17'
     mavenVersionOption: 'Default'
     mavenAuthenticateFeed: false
     effectivePomSkip: false
     sonarQubeRunAnalysis: false
   displayName: 'Build and Test with Maven'
+
+- task: CopyFiles@2
+  inputs:
+    contents: 'target/surefire-reports/**'
+    targetFolder: '$(Build.ArtifactStagingDirectory)/surefire-reports'
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)/surefire-reports'
+    ArtifactName: 'surefire-reports'
 
 - task: CopyFiles@2
   inputs:
