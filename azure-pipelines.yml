@@ -7,6 +7,7 @@ pool:
 variables:
   JAVA_HOME: '/usr/lib/jvm/zulu-17-azure-amd64'
   MAVEN_OPTS: '-Xmx1024m'
+  PGPASSWORD: '123sqldb'  # Set PostgreSQL password as an environment variable
 
 steps:
 - task: JavaToolInstaller@0
@@ -50,3 +51,16 @@ steps:
   inputs:
     PathtoPublish: '$(Build.ArtifactStagingDirectory)'
     ArtifactName: 'drop'
+
+# Install PostgreSQL client
+- script: |
+    sudo apt-get update
+    sudo apt-get install -y postgresql-client
+  displayName: 'Install PostgreSQL client'
+
+# Execute SQL scripts
+- script: |
+    psql -h localhost -U sql99 -d mydatabase -a -f ./scripts.sql
+  displayName: 'Run SQL Scripts'
+  env:
+    PGPASSWORD: $(PGPASSWORD)  # Use the environment variable for the password
