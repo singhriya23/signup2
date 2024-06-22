@@ -1,13 +1,5 @@
-trigger:
-- main
-
 pool:
   vmImage: 'ubuntu-latest'
-
-variables:
-  JAVA_HOME: '/usr/lib/jvm/zulu-17-azure-amd64'
-  MAVEN_OPTS: '-Xmx1024m'
-  PGPASSWORD: '123sqldb'  # Set PostgreSQL password as an environment variable
 
 steps:
 - task: JavaToolInstaller@0
@@ -15,13 +7,13 @@ steps:
     versionSpec: '17'
     jdkArchitectureOption: 'x64'
     jdkSourceOption: 'PreInstalled'
-    jdkDestinationDirectory: '$(JAVA_HOME)'
+    jdkDestinationDirectory: '/usr/lib/jvm/zulu-17-azure-amd64'
 
 - task: Maven@3
   inputs:
     mavenPomFile: 'pom.xml'
     goals: 'clean install'
-    options: '--batch-mode -e -X'  # Enable detailed logging
+    options: '--batch-mode -e -X'
     publishJUnitResults: true
     testResultsFiles: '**/target/surefire-reports/TEST-*.xml'
     javaHomeOption: 'JDKVersion'
@@ -60,7 +52,5 @@ steps:
 
 # Execute SQL scripts
 - script: |
-    psql -h localhost -U sql99 -d mydatabase -a -f ./scripts.sql
+    psql -h localhost -d mydatabase -a -f ./path/to/your/sql/script.sql
   displayName: 'Run SQL Scripts'
-  env:
-    PGPASSWORD: $(PGPASSWORD)  # Use the environment variable for the password
