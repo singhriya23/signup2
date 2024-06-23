@@ -1,5 +1,13 @@
+trigger:
+- main
+
 pool:
   vmImage: 'ubuntu-latest'
+
+variables:
+  JAVA_HOME: '/usr/lib/jvm/zulu-17-azure-amd64'
+  MAVEN_OPTS: '-Xmx1024m'
+  PGPASSWORD: '123sqldb'  # Set PostgreSQL password as an environment variable
 
 steps:
 - task: JavaToolInstaller@0
@@ -7,13 +15,14 @@ steps:
     versionSpec: '17'
     jdkArchitectureOption: 'x64'
     jdkSourceOption: 'PreInstalled'
-    jdkDestinationDirectory: '/usr/lib/jvm/zulu-17-azure-amd64'
+    jdkDestinationDirectory: '$(JAVA_HOME)'
+  displayName: 'Install Java 17'
 
 - task: Maven@3
   inputs:
     mavenPomFile: 'pom.xml'
     goals: 'clean install'
-    options: '--batch-mode -e -X'
+    options: '--batch-mode -e -X'  # Enable detailed logging
     publishJUnitResults: true
     testResultsFiles: '**/target/surefire-reports/TEST-*.xml'
     javaHomeOption: 'JDKVersion'
@@ -28,29 +37,43 @@ steps:
   inputs:
     contents: 'target/surefire-reports/**'
     targetFolder: '$(Build.ArtifactStagingDirectory)/surefire-reports'
+  displayName: 'Copy Test Reports'
 
 - task: PublishBuildArtifacts@1
   inputs:
     PathtoPublish: '$(Build.ArtifactStagingDirectory)/surefire-reports'
     ArtifactName: 'surefire-reports'
+  displayName: 'Publish Test Reports'
 
 - task: CopyFiles@2
   inputs:
     contents: 'target/*.jar'
     targetFolder: '$(Build.ArtifactStagingDirectory)'
+  displayName: 'Copy Build Artifacts'
 
 - task: PublishBuildArtifacts@1
   inputs:
     PathtoPublish: '$(Build.ArtifactStagingDirectory)'
     ArtifactName: 'drop'
+  displayName: 'Publish Build Artifacts'
 
-# Install PostgreSQL client
+# Install PostgreSQL server and client
 - script: |
     sudo apt-get update
-    sudo apt-get install -y postgresql-client
-  displayName: 'Install PostgreSQL client'
+    sudo apt-get install -y postgresql postgresql-contrib
+    sudo service postgresql start
+  displayName: 'Install PostgreSQL Server and Client'
+
+# Create database and user for testing
+- script: |
+    sudo -u postgres psql -c "CREATE DATABASE mydatabase;"
+    sudo -u postgres psql -c "CREATE USER sql99 WITH PASSWORD '123sqldb';"
+    sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE mydatabase TO sql99;"
+  displayName: 'Set Up PostgreSQL Database and User'
 
 # Execute SQL scripts
 - script: |
-    psql -h localhost -d mydatabase -a -f ./path/to/your/sql/script.sql
+    psql -h localhost -U sql99 -d mydatabase -a -f ./script.sql
   displayName: 'Run SQL Scripts'
+  env:
+    PGPASSWORD: $(PGPASSWORD)  # Use the environment variable for the password
